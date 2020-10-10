@@ -237,6 +237,7 @@ class Command(_BaseCommand):
         self.usage = kwargs.get('usage')
         self.rest_is_raw = kwargs.get('rest_is_raw', False)
         self.aliases = kwargs.get('aliases', [])
+        self.example = kwargs.get('example', '')
 
         if not isinstance(self.aliases, (list, tuple)):
             raise TypeError("Aliases of a command must be a list or a tuple of strings.")
