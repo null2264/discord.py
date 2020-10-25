@@ -44,7 +44,7 @@ extras_require = {
 
 setup(name='zidiscord.py',
       author='null2264',
-      url='https://github.com/Rapptz/discord.py',
+      url='https://github.com/null2264/discord.py',
       project_urls={
         "Documentation": "https://discordpy.readthedocs.io/en/latest/",
         "Issue tracker": "https://github.com/Rapptz/discord.py/issues",
