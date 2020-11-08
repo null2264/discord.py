@@ -243,8 +243,8 @@ class Colour:
         .. versionadded:: 1.5
         """
         return cls(0x36393F)
-        @classmethod
-
+    
+    @classmethod
     def nitro_booster(cls):
         """A factory method that returns a :class:`Colour` with a value of ``0xf47fff``.
 
