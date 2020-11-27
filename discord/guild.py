@@ -305,8 +305,8 @@ class Guild(Hashable):
         self._rules_channel_id = utils._get_as_snowflake(guild, 'rules_channel_id')
         self._public_updates_channel_id = utils._get_as_snowflake(guild, 'public_updates_channel_id')
 
-        cache_online_members = self._state._member_cache_flags.online
-        cache_joined = self._state._member_cache_flags.joined
+        cache_online_members = self._state.member_cache_flags.online
+        cache_joined = self._state.member_cache_flags.joined
         self_id = self._state.self_id
         for mdata in guild.get('members', []):
             member = Member(data=mdata, guild=self, state=state)
@@ -563,6 +563,30 @@ class Guild(Hashable):
     def default_role(self):
         """:class:`Role`: Gets the @everyone role that all members have by default."""
         return self.get_role(self.id)
+
+    @property
+    def premium_subscriber_role(self):
+        """Optional[:class:`Role`]: Gets the premium subscriber role, AKA "boost" role, in this guild.
+
+        .. versionadded:: 1.6
+        """
+        for role in self._roles.values():
+            if role.is_premium_subscriber():
+                return role
+        return None
+
+    @property
+    def self_role(self):
+        """Optional[:class:`Role`]: Gets the role associated with this client's user, if any.
+
+        .. versionadded:: 1.6
+        """
+        self_id = self._state.self_id
+        for role in self._roles.values():
+            tags = role.tags
+            if tags and tags.bot_id == self_id:
+                return role
+        return None
 
     @property
     def owner(self):
@@ -1236,7 +1260,8 @@ class Guild(Hashable):
     def fetch_members(self, *, limit=1000, after=None):
         """|coro|
 
-        Retrieves an :class:`.AsyncIterator` that enables receiving the guild's members.
+        Retrieves an :class:`.AsyncIterator` that enables receiving the guild's members. In order to use this,
+        :meth:`Intents.members` must be enabled.
 
         .. note::
 
@@ -1257,6 +1282,8 @@ class Guild(Hashable):
 
         Raises
         ------
+        ClientException
+            The members intent is not enabled.
         HTTPException
             Getting the members failed.
 
@@ -1278,6 +1305,10 @@ class Guild(Hashable):
             members = await guild.fetch_members(limit=150).flatten()
             # members is now a list of Member...
         """
+
+        if not self._state._intents.members:
+            raise ClientException('Intents.members must be enabled to use this.')
+
         return MemberIterator(self, limit=limit, after=after)
 
     async def fetch_member(self, member_id):
