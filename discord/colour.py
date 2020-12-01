@@ -264,5 +264,14 @@ class Colour:
 
         .. versionadded:: 1.5.1.1"""
         return cls(0xf47fff)
+    
+    @classmethod
+    def rounded(cls):
+        """A factory method that returns a :class:`Colour` with a value of ``0x2F3136``.
+        This will appear transparent on Discord's dark theme.
+
+        .. versionadded:: 1.6
+        """
+        return cls(0x2F3136)
 
 Color = Colour
