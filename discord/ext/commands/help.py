@@ -996,6 +996,11 @@ class DefaultHelpCommand(HelpCommand):
                 for line in command.help.splitlines():
                     self.paginator.add_line(line)
                 self.paginator.add_line()
+        if command.example:
+            self.paginator.add_line("Examples:")
+            for example in command.example:
+                self.paginator.add_line(" - %s%s" % (self.clean_prefix, example), empty=True)
+            self.paginator.add_line()
 
     def get_destination(self):
         ctx = self.context
