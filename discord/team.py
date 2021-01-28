@@ -3,7 +3,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2020 Rapptz
+Copyright (c) 2015-present Rapptz
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -75,7 +75,7 @@ class Team:
         """
         return self.icon_url_as()
 
-    def icon_url_as(self, *, format='None', size=1024):
+    def icon_url_as(self, *, format='webp', size=1024):
         """Returns an :class:`Asset` for the icon the team has.
 
         The format must be one of 'webp', 'jpeg', 'jpg' or 'png'.

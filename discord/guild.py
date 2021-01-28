@@ -3,7 +3,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2020 Rapptz
+Copyright (c) 2015-present Rapptz
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -30,19 +30,17 @@ from collections import namedtuple
 from . import utils
 from .role import Role
 from .member import Member, VoiceState
-from .activity import create_activity
 from .emoji import Emoji
 from .errors import InvalidData
 from .permissions import PermissionOverwrite
 from .colour import Colour
 from .errors import InvalidArgument, ClientException
 from .channel import *
-from .enums import VoiceRegion, Status, ChannelType, try_enum, VerificationLevel, ContentFilter, NotificationLevel
+from .enums import VoiceRegion, ChannelType, try_enum, VerificationLevel, ContentFilter, NotificationLevel
 from .mixins import Hashable
 from .user import User
 from .invite import Invite
 from .iterators import AuditLogIterator, MemberIterator
-from .webhook import Webhook
 from .widget import Widget
 from .asset import Asset
 from .flags import SystemChannelFlags
@@ -146,6 +144,8 @@ class Guild(Hashable):
         - ``ANIMATED_ICON``: Guild can upload an animated icon.
         - ``PUBLIC_DISABLED``: Guild cannot be public.
         - ``WELCOME_SCREEN_ENABLED``: Guild has enabled the welcome screen
+        - ``MEMBER_VERIFICATION_GATE_ENABLED``: Guild has Membership Screening enabled.
+        - ``PREVIEW_ENABLED``: Guild can be viewed before being accepted via Membership Screening.
 
     splash: Optional[:class:`str`]
         The guild's invite splash.
@@ -471,7 +471,7 @@ class Guild(Hashable):
     @property
     def rules_channel(self):
         """Optional[:class:`TextChannel`]: Return's the guild's channel used for the rules.
-        Must be a discoverable guild.
+        The guild must be a Community guild.
 
         If no channel is set, then this returns ``None``.
 
@@ -483,8 +483,8 @@ class Guild(Hashable):
     @property
     def public_updates_channel(self):
         """Optional[:class:`TextChannel`]: Return's the guild's channel where admins and
-        moderators of the guilds receive notices from Discord. This is only available to
-        guilds that contain ``PUBLIC`` in :attr:`Guild.features`.
+        moderators of the guilds receive notices from Discord. The guild must be a
+        Community guild.
 
         If no channel is set, then this returns ``None``.
 
@@ -1084,6 +1084,9 @@ class Guild(Hashable):
             The new channel that is used for the system channel. Could be ``None`` for no system channel.
         system_channel_flags: :class:`SystemChannelFlags`
             The new system channel settings to use with the new system channel.
+        preferred_locale: :class:`str`
+            The new preferred locale for the guild. Used as the primary language in the guild.
+            If set, this must be an ISO 639 code, e.g. ``en-US`` or ``ja`` or ``zh-CN``.
         rules_channel: Optional[:class:`TextChannel`]
             The new channel that is used for rules. This is only available to
             guilds that contain ``PUBLIC`` in :attr:`Guild.features`. Could be ``None`` for no rules
@@ -1216,10 +1219,10 @@ class Guild(Hashable):
         except KeyError:
             pass
         else:
-            if rules_channel is None:
-                fields['public_updates_channel_id'] = rules_channel
+            if public_updates_channel is None:
+                fields['public_updates_channel_id'] = public_updates_channel
             else:
-                fields['public_updates_channel_id'] = rules_channel.id
+                fields['public_updates_channel_id'] = public_updates_channel.id
         await http.edit_guild(self.id, reason=reason, **fields)
 
     async def fetch_channels(self):
@@ -1483,6 +1486,7 @@ class Guild(Hashable):
             The webhooks for this guild.
         """
 
+        from .webhook import Webhook
         data = await self._state.http.guild_webhooks(self.id)
         return [Webhook.from_state(d, state=self._state) for d in data]
 
@@ -1729,13 +1733,16 @@ class Guild(Hashable):
         You must have the :attr:`~Permissions.manage_roles` permission to
         do this.
 
+        ..versionchanged:: 1.6
+            Can now pass ``int`` to ``colour`` keyword-only parameter.
+
         Parameters
         -----------
         name: :class:`str`
             The role name. Defaults to 'new role'.
         permissions: :class:`Permissions`
             The permissions to have. Defaults to no permissions.
-        colour: :class:`Colour`
+        colour: Union[:class:`Colour`, :class:`int`]
             The colour for the role. Defaults to :meth:`Colour.default`.
             This is aliased to ``color`` as well.
         hoist: :class:`bool`
@@ -1774,6 +1781,8 @@ class Guild(Hashable):
         except KeyError:
             colour = fields.get('color', Colour.default())
         finally:
+            if isinstance(colour, int):
+                colour = Colour(value=colour)
             fields['color'] = colour.value
 
         valid_keys = ('name', 'permissions', 'color', 'hoist', 'mentionable')
@@ -2105,7 +2114,7 @@ class Guild(Hashable):
 
         return await self._state.chunk_guild(self, cache=cache)
 
-    async def query_members(self, query=None, *, limit=5, user_ids=None, cache=True):
+    async def query_members(self, query=None, *, limit=5, user_ids=None, presences=False, cache=True):
         """|coro|
 
         Request members that belong to this guild whose username starts with
@@ -2122,6 +2131,12 @@ class Guild(Hashable):
         limit: :class:`int`
             The maximum number of members to send back. This must be
             a number between 5 and 100.
+        presences: :class:`bool`
+            Whether to request for presences to be provided. This defaults
+            to ``False``.
+
+            .. versionadded:: 1.6
+
         cache: :class:`bool`
             Whether to cache the members internally. This makes operations
             such as :meth:`get_member` work for those that matched.
@@ -2137,12 +2152,17 @@ class Guild(Hashable):
             The query timed out waiting for the members.
         ValueError
             Invalid parameters were passed to the function
+        ClientException
+            The presences intent is not enabled.
 
         Returns
         --------
         List[:class:`Member`]
             The list of members that have matched the query.
         """
+
+        if presences and not self._state._intents.presences:
+            raise ClientException('Intents.presences must be enabled to use this.')
 
         if query is None:
             if query == '':
@@ -2155,7 +2175,7 @@ class Guild(Hashable):
             raise ValueError('Cannot pass both query and user_ids')
 
         limit = min(100, limit or 5)
-        return await self._state.query_members(self, query=query, limit=limit, user_ids=user_ids, cache=cache)
+        return await self._state.query_members(self, query=query, limit=limit, user_ids=user_ids, presences=presences, cache=cache)
 
     async def change_voice_state(self, *, channel, self_mute=False, self_deaf=False):
         """|coro|

@@ -3,7 +3,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2020 Rapptz
+Copyright (c) 2015-present Rapptz
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -30,12 +30,11 @@ import inspect
 import importlib.util
 import sys
 import traceback
-import re
 import types
 
 import discord
 
-from .core import GroupMixin, Command
+from .core import GroupMixin
 from .view import StringView
 from .context import Context
 from . import errors

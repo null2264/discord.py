@@ -6,16 +6,16 @@ Discord API Wrapper
 
 A basic wrapper for the Discord API.
 
-:copyright: (c) 2015-2020 Rapptz
+:copyright: (c) 2015-present Rapptz
 :license: MIT, see LICENSE for more details.
 
 """
 
 __title__ = 'discord'
-__author__ = 'Rapptz'
+__author__ = 'ZiRO'
 __license__ = 'MIT'
-__copyright__ = 'Copyright 2015-2020 Rapptz'
-__version__ = '1.6.0.2'
+__copyright__ = 'Copyright 2015-present ZiRO'
+__version__ = '1.7.0'
 
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
@@ -33,7 +33,7 @@ from .guild import Guild
 from .flags import *
 from .relationship import Relationship
 from .member import Member, VoiceState
-from .message import Message, MessageReference, Attachment
+from .message import *
 from .asset import Asset
 from .errors import *
 from .calls import CallMessage, GroupCall
@@ -62,13 +62,6 @@ from .sticker import Sticker
 
 VersionInfo = namedtuple('VersionInfo', 'major minor micro releaselevel serial')
 
-version_info = VersionInfo(major=1, minor=6, micro=0, releaselevel='alpha', serial=0)
+version_info = VersionInfo(major=1, minor=7, micro=0, releaselevel='alpha', serial=0)
 
-try:
-    from logging import NullHandler
-except ImportError:
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-
-logging.getLogger(__name__).addHandler(NullHandler())
+logging.getLogger(__name__).addHandler(logging.NullHandler())

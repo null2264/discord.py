@@ -3,7 +3,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2020 Rapptz
+Copyright (c) 2015-present Rapptz
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -685,6 +685,7 @@ class CustomActivity(BaseActivity):
     __slots__ = ('name', 'emoji', 'state')
 
     def __init__(self, name, *, emoji=None, **extra):
+        super().__init__(**extra)
         self.name = name
         self.state = extra.pop('state', None)
         if self.name == 'Custom Status':

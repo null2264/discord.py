@@ -3,7 +3,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2020 Rapptz
+Copyright (c) 2015-present Rapptz
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -446,6 +446,11 @@ class ExpireBehaviour(Enum):
 
 ExpireBehavior = ExpireBehaviour
 
+class StickerType(Enum):
+    png = 1
+    apng = 2
+    lottie = 3
+
 def try_enum(cls, val):
     """A function that tries to turn the value into enum ``cls``.
 
@@ -456,8 +461,3 @@ def try_enum(cls, val):
         return cls._enum_value_map_[val]
     except (KeyError, TypeError, AttributeError):
         return val
-
-class StickerType(Enum):
-    png = 1
-    apng = 2
-    lottie = 3

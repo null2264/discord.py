@@ -3,7 +3,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2020 Rapptz
+Copyright (c) 2015-present Rapptz
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -32,14 +32,13 @@ import asyncio
 from .iterators import HistoryIterator
 from .context_managers import Typing
 from .enums import ChannelType
-from .errors import InvalidArgument, ClientException, HTTPException
+from .errors import InvalidArgument, ClientException
 from .permissions import PermissionOverwrite, Permissions
 from .role import Role
 from .invite import Invite
 from .file import File
 from .voice_client import VoiceClient, VoiceProtocol
 from . import utils
-from .message_reference import _MessageType, MessageReference
 
 class _Undefined:
     def __repr__(self):
@@ -756,7 +755,7 @@ class GuildChannel:
 
         Returns a list of all active instant invites from this channel.
 
-        You must have :attr:`~Permissions.manage_guild` to get this information.
+        You must have :attr:`~Permissions.manage_channels` to get this information.
 
         Raises
         -------
@@ -897,15 +896,13 @@ class Messageable(metaclass=abc.ABCMeta):
 
         if mention_author is not None:
             allowed_mentions = allowed_mentions or {}
-            allowed_mentions['replied_user'] = mention_author
+            allowed_mentions['replied_user'] = bool(mention_author)
 
         if reference is not None:
-            if isinstance(reference, _MessageType):
-                if not isinstance(reference, MessageReference):
-                    reference = reference.to_reference()
-                reference = reference.to_dict()
-            else:
-                raise InvalidArgument('reference parameter must be Message or MessageReference')
+            try:
+                reference = reference.to_message_reference_dict()
+            except AttributeError:
+                raise InvalidArgument('reference parameter must be Message or MessageReference') from None
 
         if file is not None and files is not None:
             raise InvalidArgument('cannot pass both file and files parameter to send()')
