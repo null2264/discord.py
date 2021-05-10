@@ -158,7 +158,7 @@ class Command(_BaseCommand):
         isn't one.
     cog: Optional[:class:`Cog`]
         The cog that this command belongs to. ``None`` if there isn't one.
-    checks: List[Callable[..., :class:`bool`]]
+    checks: List[Callable[[:class:`.Context`], :class:`bool`]]
         A list of predicates that verifies if the command could be executed
         with the given :class:`.Context` as the sole parameter. If an exception
         is necessary to be thrown to signal failure, then one inherited from
@@ -524,7 +524,7 @@ class Command(_BaseCommand):
         # The greedy converter is simple -- it keeps going until it fails in which case,
         # it undos the view ready for the next parameter to use instead
         if type(converter) is converters._Greedy:
-            if param.kind == param.POSITIONAL_OR_KEYWORD:
+            if param.kind == param.POSITIONAL_OR_KEYWORD or param.kind == param.POSITIONAL_ONLY:
                 return await self._transform_greedy_pos(ctx, param, required, converter.converter)
             elif param.kind == param.VAR_POSITIONAL:
                 return await self._transform_greedy_var_pos(ctx, param, converter.converter)
@@ -694,7 +694,7 @@ class Command(_BaseCommand):
             raise discord.ClientException(fmt.format(self))
 
         for name, param in iterator:
-            if param.kind == param.POSITIONAL_OR_KEYWORD:
+            if param.kind == param.POSITIONAL_OR_KEYWORD or param.kind == param.POSITIONAL_ONLY:
                 transformed = await self.transform(ctx, param)
                 args.append(transformed)
             elif param.kind == param.KEYWORD_ONLY:
@@ -716,9 +716,8 @@ class Command(_BaseCommand):
                     except RuntimeError:
                         break
 
-        if not self.ignore_extra:
-            if not view.eof:
-                raise TooManyArguments('Too many arguments passed to ' + self.qualified_name)
+        if not self.ignore_extra and not view.eof:
+            raise TooManyArguments('Too many arguments passed to ' + self.qualified_name)
 
     async def call_before_hooks(self, ctx):
         # now that we're done preparing we can call the pre-command hooks
@@ -1343,6 +1342,8 @@ class Group(GroupMixin, Command):
             injected = hooked_wrapped_callback(self, ctx, self.callback)
             await injected(*ctx.args, **ctx.kwargs)
 
+        ctx.invoked_parents.append(ctx.invoked_with)
+
         if trigger and ctx.invoked_subcommand:
             ctx.invoked_with = trigger
             await ctx.invoked_subcommand.invoke(ctx)
@@ -1380,6 +1381,8 @@ class Group(GroupMixin, Command):
             finally:
                 if call_hooks:
                     await self.call_after_hooks(ctx)
+
+        ctx.invoked_parents.append(ctx.invoked_with)
 
         if trigger and ctx.invoked_subcommand:
             ctx.invoked_with = trigger
@@ -1957,8 +1960,11 @@ def cooldown(rate, per, type=BucketType.default):
         The number of times a command can be used before triggering a cooldown.
     per: :class:`float`
         The amount of seconds to wait for a cooldown when it's been triggered.
-    type: :class:`.BucketType`
-        The type of cooldown to have.
+    type: Union[:class:`.BucketType`, Callable[[:class:`.Message`], Any]]
+        The type of cooldown to have. If callable, should return a key for the mapping.
+        
+        .. versionchanged:: 1.7
+            Callables are now supported for custom bucket types.
     """
 
     def decorator(func):

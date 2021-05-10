@@ -68,8 +68,29 @@ def convert_emoji_reaction(emoji):
 
     raise InvalidArgument('emoji argument must be str, Emoji, or Reaction not {.__class__.__name__}.'.format(emoji))
 
-class Attachment:
+class Attachment(Hashable):
     """Represents an attachment from Discord.
+
+    .. container:: operations
+
+        .. describe:: str(x)
+
+            Returns the URL of the attachment.
+
+        .. describe:: x == y
+
+            Checks if the attachment is equal to another attachment.
+
+        .. describe:: x != y
+
+            Checks if the attachment is not equal to another attachment.
+
+        .. describe:: hash(x)
+
+            Returns the hash of the attachment.
+
+    .. versionchanged:: 1.7
+        Attachment can now be casted to :class:`str` and is hashable.
 
     Attributes
     ------------
@@ -90,9 +111,13 @@ class Attachment:
         The proxy URL. This is a cached version of the :attr:`~Attachment.url` in the
         case of images. When the message is deleted, this URL might be valid for a few
         minutes or not valid at all.
+    content_type: Optional[:class:`str`]
+        The attachment's `media type <https://en.wikipedia.org/wiki/Media_type>`_
+
+        .. versionadded:: 1.7
     """
 
-    __slots__ = ('id', 'size', 'height', 'width', 'filename', 'url', 'proxy_url', '_http')
+    __slots__ = ('id', 'size', 'height', 'width', 'filename', 'url', 'proxy_url', '_http', 'content_type')
 
     def __init__(self, *, data, state):
         self.id = int(data['id'])
@@ -103,6 +128,7 @@ class Attachment:
         self.url = data.get('url')
         self.proxy_url = data.get('proxy_url')
         self._http = state.http
+        self.content_type = data.get('content_type')
 
     def is_spoiler(self):
         """:class:`bool`: Whether this attachment contains a spoiler."""
@@ -110,6 +136,9 @@ class Attachment:
 
     def __repr__(self):
         return '<Attachment id={0.id} filename={0.filename!r} url={0.url!r}>'.format(self)
+
+    def __str__(self):
+        return self.url or ''
 
     async def save(self, fp, *, seek_begin=True, use_cached=False):
         """|coro|
@@ -279,6 +308,12 @@ class MessageReference:
         The channel id of the message referenced.
     guild_id: Optional[:class:`int`]
         The guild id of the message referenced.
+    fail_if_not_exists: :class:`bool`
+        Whether replying to the referenced message should raise :class:`HTTPException`
+        if the message no longer exists or Discord could not fetch the message.
+
+        .. versionadded:: 1.7
+
     resolved: Optional[Union[:class:`Message`, :class:`DeletedReferencedMessage`]]
         The message that this reference resolved to. If this is ``None``
         then the original message was not fetched either due to the Discord API
@@ -291,14 +326,15 @@ class MessageReference:
         .. versionadded:: 1.6
     """
 
-    __slots__ = ('message_id', 'channel_id', 'guild_id', 'resolved', '_state')
+    __slots__ = ('message_id', 'channel_id', 'guild_id', 'fail_if_not_exists', 'resolved', '_state')
 
-    def __init__(self, *, message_id, channel_id, guild_id=None):
+    def __init__(self, *, message_id, channel_id, guild_id=None, fail_if_not_exists=True):
         self._state = None
         self.resolved = None
         self.message_id = message_id
         self.channel_id = channel_id
         self.guild_id = guild_id
+        self.fail_if_not_exists = fail_if_not_exists
 
     @classmethod
     def with_state(cls, state, data):
@@ -306,12 +342,13 @@ class MessageReference:
         self.message_id = utils._get_as_snowflake(data, 'message_id')
         self.channel_id = int(data.pop('channel_id'))
         self.guild_id = utils._get_as_snowflake(data, 'guild_id')
+        self.fail_if_not_exists = data.get('fail_if_not_exists', True)
         self._state = state
         self.resolved = None
         return self
 
     @classmethod
-    def from_message(cls, message):
+    def from_message(cls, message, *, fail_if_not_exists=True):
         """Creates a :class:`MessageReference` from an existing :class:`~discord.Message`.
 
         .. versionadded:: 1.6
@@ -320,13 +357,18 @@ class MessageReference:
         ----------
         message: :class:`~discord.Message`
             The message to be converted into a reference.
+        fail_if_not_exists: :class:`bool`
+            Whether replying to the referenced message should raise :class:`HTTPException`
+            if the message no longer exists or Discord could not fetch the message.
+
+            .. versionadded:: 1.7
 
         Returns
         -------
         :class:`MessageReference`
             A reference to the message.
         """
-        self = cls(message_id=message.id, channel_id=message.channel.id, guild_id=getattr(message.guild, 'id', None))
+        self = cls(message_id=message.id, channel_id=message.channel.id, guild_id=getattr(message.guild, 'id', None), fail_if_not_exists=fail_if_not_exists)
         self._state = message._state
         return self
 
@@ -352,6 +394,8 @@ class MessageReference:
         result['channel_id'] = self.channel_id
         if self.guild_id is not None:
             result['guild_id'] = self.guild_id
+        if self.fail_if_not_exists is not None:
+            result['fail_if_not_exists'] = self.fail_if_not_exists
         return result
 
     to_message_reference_dict = to_dict
@@ -406,7 +450,7 @@ class Message(Hashable):
         The actual contents of the message.
     nonce
         The value used by the discord guild and the client to verify that the message is successfully sent.
-        This is typically non-important.
+        This is not stored long term within Discord's servers and is only used ephemerally.
     embeds: List[:class:`Embed`]
         A list of embeds the message has.
     channel: Union[:class:`abc.Messageable`]
@@ -415,6 +459,9 @@ class Message(Hashable):
     call: Optional[:class:`CallMessage`]
         The call that the message refers to. This is only applicable to messages of type
         :attr:`MessageType.call`.
+
+        .. deprecated:: 1.7
+
     reference: Optional[:class:`~discord.MessageReference`]
         The message that this message references. This is only applicable to messages of
         type :attr:`MessageType.pins_add`, crossposted messages created by a
@@ -504,6 +551,7 @@ class Message(Hashable):
         self.application = data.get('application')
         self.activity = data.get('activity')
         self.channel = channel
+        self.call = None
         self._edited_timestamp = utils.parse_time(data['edited_timestamp'])
         self.type = try_enum(MessageType, data['type'])
         self.pinned = data['pinned']
@@ -780,9 +828,9 @@ class Message(Hashable):
 
         .. note::
 
-            This *does not* escape markdown. If you want to escape
-            markdown then use :func:`utils.escape_markdown` along
-            with this function.
+            This *does not* affect markdown. If you want to escape
+            or remove markdown then use :func:`utils.escape_markdown` or :func:`utils.remove_markdown` 
+            respectively, along with this function.
         """
 
         transformations = {
@@ -919,6 +967,21 @@ class Message(Hashable):
 
         if self.type is MessageType.channel_follow_add:
             return '{0.author.name} has added {0.content} to this channel'.format(self)
+
+        if self.type is MessageType.guild_stream:
+            return '{0.author.name} is live! Now streaming {0.author.activity.name}'.format(self)
+
+        if self.type is MessageType.guild_discovery_disqualified:
+            return 'This server has been removed from Server Discovery because it no longer passes all the requirements. Check Server Settings for more details.'
+
+        if self.type is MessageType.guild_discovery_requalified:
+            return 'This server is eligible for Server Discovery again and has been automatically relisted!'
+
+        if self.type is MessageType.guild_discovery_grace_period_initial_warning:
+            return 'This server has failed Discovery activity requirements for 1 week. If this server fails for 4 weeks in a row, it will be automatically removed from Discovery.'
+
+        if self.type is MessageType.guild_discovery_grace_period_final_warning:
+            return 'This server has failed Discovery activity requirements for 3 weeks in a row. If this server fails for 1 more week, it will be removed from Discovery.'
 
     async def delete(self, *, delay=None):
         """|coro|
@@ -1243,12 +1306,15 @@ class Message(Hashable):
         """
         await self._state.http.clear_reactions(self.channel.id, self.id)
 
+    @utils.deprecated()
     async def ack(self):
         """|coro|
 
         Marks this message as read.
 
         The user must not be a bot user.
+
+        .. deprecated:: 1.7
 
         Raises
         -------
@@ -1266,8 +1332,8 @@ class Message(Hashable):
     async def reply(self, content=None, **kwargs):
         """|coro|
 
-        A shortcut method to :meth:`abc.Messageable.send` to reply to the
-        :class:`Message`.
+        A shortcut method to :meth:`.abc.Messageable.send` to reply to the
+        :class:`.Message`.
 
         .. versionadded:: 1.6
 
@@ -1283,16 +1349,24 @@ class Message(Hashable):
 
         Returns
         ---------
-        :class:`Message`
+        :class:`.Message`
             The message that was sent.
         """
 
         return await self.channel.send(content, reference=self, **kwargs)
 
-    def to_reference(self):
+    def to_reference(self, *, fail_if_not_exists=True):
         """Creates a :class:`~discord.MessageReference` from the current message.
 
         .. versionadded:: 1.6
+
+        Parameters
+        ----------
+        fail_if_not_exists: :class:`bool`
+            Whether replying using the message reference should raise :class:`HTTPException`
+            if the message no longer exists or Discord could not fetch the message.
+
+            .. versionadded:: 1.7
 
         Returns
         ---------
@@ -1300,7 +1374,7 @@ class Message(Hashable):
             The reference to this message.
         """
 
-        return MessageReference.from_message(self)
+        return MessageReference.from_message(self, fail_if_not_exists=fail_if_not_exists)
 
     def to_message_reference_dict(self):
         data = {

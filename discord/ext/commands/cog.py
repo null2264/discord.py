@@ -96,7 +96,7 @@ class CogMeta(type):
     def __new__(cls, *args, **kwargs):
         name, bases, attrs = args
         attrs['__cog_name__'] = kwargs.pop('name', name)
-        attrs['__cog_settings__'] = command_attrs = kwargs.pop('command_attrs', {})
+        attrs['__cog_settings__'] = kwargs.pop('command_attrs', {})
 
         description = kwargs.pop('description', None)
         if description is None:
@@ -126,7 +126,7 @@ class CogMeta(type):
                     commands[elem] = value
                 elif inspect.iscoroutinefunction(value):
                     try:
-                        is_listener = getattr(value, '__cog_listener__')
+                        getattr(value, '__cog_listener__')
                     except AttributeError:
                         continue
                     else:
@@ -192,7 +192,7 @@ class Cog(metaclass=CogMeta):
                 parent = lookup[parent.qualified_name]
 
                 # Update our parent's reference to our self
-                removed = parent.remove_command(command.name)
+                parent.remove_command(command.name)
                 parent.add_command(command)
 
         return self
@@ -301,7 +301,7 @@ class Cog(metaclass=CogMeta):
 
         .. versionadded:: 1.7
         """
-        return hasattr(self.cog_command_error.__func__, '__cog_special_method__')
+        return not hasattr(self.cog_command_error.__func__, '__cog_special_method__')
 
     @_cog_special_method
     def cog_unload(self):
@@ -408,7 +408,8 @@ class Cog(metaclass=CogMeta):
                 except Exception as e:
                     # undo our additions
                     for to_undo in self.__cog_commands__[:index]:
-                        bot.remove_command(to_undo.name)
+                        if to_undo.parent is None:
+                            bot.remove_command(to_undo.name)
                     raise e
 
         # check if we're overriding the default
