@@ -248,9 +248,17 @@ class Colour:
     darker_gray = darker_grey
 
     @classmethod
-    def blurple(cls):
+    def old_blurple(cls):
         """A factory method that returns a :class:`Colour` with a value of ``0x7289da``."""
         return cls(0x7289da)
+
+    @classmethod
+    def blurple(cls):
+        """A factory method that returns a :class:`Colour` with a value of ``0x5e62f2``.
+
+        .. versionadded:: 1.7.2.1
+        """
+        return cls(0x5e62f2)
 
     @classmethod
     def greyple(cls):
