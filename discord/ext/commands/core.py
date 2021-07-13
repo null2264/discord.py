@@ -216,6 +216,8 @@ class Command(_BaseCommand):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError('Callback must be a coroutine.')
 
+        self._raw = kwargs
+
         self.name = name = kwargs.get('name') or func.__name__
         if not isinstance(name, str):
             raise TypeError('Name of a command must be a string.')
@@ -289,6 +291,10 @@ class Command(_BaseCommand):
             self._after_invoke = None
         else:
             self.after_invoke(after_invoke)
+
+    @property
+    def raw(self):
+        return self._raw
 
     @property
     def callback(self):

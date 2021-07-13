@@ -15,7 +15,7 @@ __title__ = 'discord'
 __author__ = 'ZiRO'
 __license__ = 'MIT'
 __copyright__ = 'Copyright 2015-present ZiRO'
-__version__ = '1.7.3'
+__version__ = '1.7.3.1'
 
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
