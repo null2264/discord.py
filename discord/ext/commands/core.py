@@ -194,6 +194,12 @@ class Command(_BaseCommand):
         If ``True``\, cooldown processing is done after argument parsing,
         which calls converters. If ``False`` then cooldown processing is done
         first and then the converters are called second. Defaults to ``False``.
+    extras: :class:`dict`
+        A dict of user provided extras to attach to the Command.
+
+        .. note::
+            This object may be copied by the library.
+        .. versionadded:: 1.7.3.2
     """
 
     def __new__(cls, *args, **kwargs):
@@ -216,8 +222,6 @@ class Command(_BaseCommand):
         if not asyncio.iscoroutinefunction(func):
             raise TypeError('Callback must be a coroutine.')
 
-        self._raw = kwargs
-
         self.name = name = kwargs.get('name') or func.__name__
         if not isinstance(name, str):
             raise TypeError('Name of a command must be a string.')
@@ -239,7 +243,7 @@ class Command(_BaseCommand):
         self.usage = kwargs.get('usage')
         self.rest_is_raw = kwargs.get('rest_is_raw', False)
         self.aliases = kwargs.get('aliases', [])
-        self.example = kwargs.get('example', [])
+        self.extras = kwargs.get('extras', {})
 
         if not isinstance(self.aliases, (list, tuple)):
             raise TypeError("Aliases of a command must be a list or a tuple of strings.")
