@@ -1,3 +1,5 @@
+:orphan:
+
 .. currentmodule:: discord
 .. _faq:
 
@@ -96,7 +98,7 @@ The constructor may be used for static activities, while :meth:`Client.change_pr
     There is a high chance of disconnecting if presences are changed right after connecting.
 
 The status type (playing, listening, streaming, watching) can be set using the :class:`ActivityType` enum.
-For memory optimisation purposes, some activities are offered in slimmed down versions:
+For memory optimisation purposes, some activities are offered in slimmed-down versions:
 
 - :class:`Game`
 - :class:`Streaming`
@@ -388,7 +390,7 @@ Example: ::
 
     @bot.command()
     async def length(ctx):
-        await ctx.send('Your message is {} characters long.'.format(len(ctx.message.content)))
+        await ctx.send(f'Your message is {len(ctx.message.content)} characters long.')
 
 How do I make a subcommand?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -405,6 +407,6 @@ Example: ::
 
     @git.command()
     async def push(ctx, remote: str, branch: str):
-        await ctx.send('Pushing to {} {}'.format(remote, branch))
+        await ctx.send(f'Pushing to {remote} {branch}')
 
 This could then be used as ``?git push origin master``.

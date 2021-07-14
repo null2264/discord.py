@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 The MIT License (MIT)
 
@@ -96,12 +94,12 @@ class Permissions(BaseFlags):
 
     def __init__(self, permissions=0, **kwargs):
         if not isinstance(permissions, int):
-            raise TypeError('Expected int parameter, received %s instead.' % permissions.__class__.__name__)
+            raise TypeError(f'Expected int parameter, received {permissions.__class__.__name__} instead.')
 
         self.value = permissions
         for key, value in kwargs.items():
             if key not in self.VALID_FLAGS:
-                raise TypeError('%r is not a valid permission name.' % key)
+                raise TypeError(f'{key!r} is not a valid permission name.')
             setattr(self, key, value)
 
     def is_subset(self, other):
@@ -109,14 +107,14 @@ class Permissions(BaseFlags):
         if isinstance(other, Permissions):
             return (self.value & other.value) == self.value
         else:
-            raise TypeError("cannot compare {} with {}".format(self.__class__.__name__, other.__class__.__name__))
+            raise TypeError(f"cannot compare {self.__class__.__name__} with {other.__class__.__name__}")
 
     def is_superset(self, other):
         """Returns ``True`` if self has the same or more permissions as other."""
         if isinstance(other, Permissions):
             return (self.value | other.value) == self.value
         else:
-            raise TypeError("cannot compare {} with {}".format(self.__class__.__name__, other.__class__.__name__))
+            raise TypeError(f"cannot compare {self.__class__.__name__} with {other.__class__.__name__}")
 
     def is_strict_subset(self, other):
         """Returns ``True`` if the permissions on other are a strict subset of those on self."""
@@ -142,7 +140,7 @@ class Permissions(BaseFlags):
         """A factory method that creates a :class:`Permissions` with all
         permissions set to ``True``.
         """
-        return cls(0b111111111111111111111111111111111)
+        return cls(0b111111111111111111111111111111111111)
 
     @classmethod
     def all_channel(cls):
@@ -473,6 +471,39 @@ class Permissions(BaseFlags):
         """
         return 1 << 32
 
+    @flag_value
+    def manage_events(self):
+        """:class:`bool`: Returns ``True`` if a user can manage guild events.
+
+        .. versionadded:: 2.0
+        """
+        return 1 << 33
+
+    @flag_value
+    def manage_threads(self):
+        """:class:`bool`: Returns ``True`` if a user can manage threads.
+
+        .. versionadded:: 2.0
+        """
+        return 1 << 34
+
+    @flag_value
+    def use_threads(self):
+        """:class:`bool`: Returns ``True`` if a user can create and participate in public threads.
+
+        .. versionadded:: 2.0
+        """
+        return 1 << 35
+
+    @flag_value
+    def use_private_threads(self):
+        """:class:`bool`: Returns ``True`` if a user can create and participate in private threads.
+
+        .. versionadded:: 2.0
+        """
+        return 1 << 36
+
+
 def augment_from_permissions(cls):
     cls.VALID_NAMES = set(Permissions.VALID_FLAGS)
     aliases = set()
@@ -539,7 +570,7 @@ class PermissionOverwrite:
 
         for key, value in kwargs.items():
             if key not in self.VALID_NAMES:
-                raise ValueError('no permission called {0}.'.format(key))
+                raise ValueError(f'no permission called {key}.')
 
             setattr(self, key, value)
 
@@ -548,7 +579,7 @@ class PermissionOverwrite:
 
     def _set(self, key, value):
         if value not in (True, None, False):
-            raise TypeError('Expected bool or NoneType, received {0.__class__.__name__}'.format(value))
+            raise TypeError(f'Expected bool or NoneType, received {value.__class__.__name__}')
 
         if value is None:
             self._values.pop(key, None)
